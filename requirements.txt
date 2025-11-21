@@ -1,0 +1,9 @@
+fastapi
+pydantic
+PyYAML
+requests
+dbt-core
+dbt-bigquery
+GitPython
+python-dotenv
+# Git integration
