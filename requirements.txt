@@ -6,4 +6,5 @@ dbt-core
 dbt-bigquery
 GitPython
 python-dotenv
+gradio
 # Git integration
