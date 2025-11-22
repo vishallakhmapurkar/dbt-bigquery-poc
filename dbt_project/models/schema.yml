@@ -1,0 +1,26 @@
+version: 2
+sources:
+- name: dbt_vlakhmapurkar
+  database: dbt-hackathon-genai
+  schema: dbt_vlakhmapurkar
+  tables:
+  - name: customers
+    description: One record per customer.
+    columns:
+    - name: customer_id
+      description: Primary key
+    - name: first_name
+      description: Customer first name
+    - name: last_name
+      description: Customer last name
+  - name: orders
+    description: One record per order. Includes cancelled and deleted orders.
+    columns:
+    - name: order_id
+      description: Primary key
+    - name: customer_id
+      description: Foreign key to customers
+    - name: order_date
+      description: Order creation timestamp
+    - name: status
+      description: Order status

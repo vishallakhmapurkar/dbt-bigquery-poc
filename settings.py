@@ -11,7 +11,7 @@ USE_GOOGLE_AI = True
 OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "gemma3"
 
-
+REPO_PATH = os.path.dirname(os.path.abspath(__file__))
 # Google AI Studio
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GOOGLE_MODEL = "models/gemini-2.5-flash"

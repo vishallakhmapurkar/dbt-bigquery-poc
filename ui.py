@@ -1,7 +1,9 @@
 import gradio as gr
 import requests
 import json
-
+import subprocess
+import os
+from settings import REPO_PATH
 API = "http://localhost:8000"
 
 # --------------- CSS Theme ---------------
@@ -83,7 +85,26 @@ def run_simple(endpoint, console):
         return logs.strip(), append_console(console, f"OK {endpoint}", "success")
     except Exception as e:
         return "", append_console(console, f"Request failed: {e}", "error")
-
+# NEW: Git push logic
+def git_push_ui(commit_msg, console):
+    if not commit_msg.strip():
+        return "Commit message required", append_console(console, "Commit message required", "error")
+    try:
+        # Run git commands in REPO_PATH
+        cmds = [
+            ["git", "-C", REPO_PATH, "add", "."],
+            ["git", "-C", REPO_PATH, "commit", "-m", commit_msg],
+            ["git", "-C", REPO_PATH, "push"]
+        ]
+        logs = ""
+        for cmd in cmds:
+            proc = subprocess.run(cmd, capture_output=True, text=True)
+            logs += f"$ {' '.join(cmd)}\n{proc.stdout}{proc.stderr}\n"
+            if proc.returncode != 0:
+                return logs.strip(), append_console(console, f"Git command failed: {' '.join(cmd)}", "error")
+        return logs.strip(), append_console(console, "Git push successful", "success")
+    except Exception as e:
+        return str(e), append_console(console, f"Git push failed: {e}", "error")
 # --------------- UI ---------------
 with gr.Blocks(css=custom_css) as demo:
     gr.Markdown("# 🚀 dbt Generator UI (Ollama gemma3:4b + FastAPI)\nUpload a spec, configure materializations, preview, generate files, and run dbt.")
@@ -127,7 +148,11 @@ with gr.Blocks(css=custom_css) as demo:
         logs_box = gr.Textbox(lines=16, label="dbt logs")
         build_btn.click(lambda console: run_simple("/build", console), [console], [logs_box, console])
         test_btn.click(lambda console: run_simple("/test", console), [console], [logs_box, console])
-
+    with gr.Tab("Git"):
+        commit_msg = gr.Textbox(label="Commit message", placeholder="Enter commit message")
+        gitpush_btn = gr.Button("Git Push")
+        gitpush_out = gr.Textbox(lines=12, label="Git Push logs")
+        gitpush_btn.click(git_push_ui, [commit_msg, console], [gitpush_out, console])
     clear_btn = gr.Button("Clear console")
     clear_btn.click(clear_console, None, console)
 
