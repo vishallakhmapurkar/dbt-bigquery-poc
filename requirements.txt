@@ -7,4 +7,5 @@ dbt-bigquery
 GitPython
 python-dotenv
 gradio
+streamlit
 # Git integration

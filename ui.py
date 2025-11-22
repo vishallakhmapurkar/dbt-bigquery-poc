@@ -1,57 +1,84 @@
 import gradio as gr
-import requests
-import json
-import subprocess
-import os
+import requests, json, subprocess, os
 from settings import REPO_PATH
+
 API = "http://localhost:8000"
 
-# --------------- CSS Theme ---------------
+# --- Custom CSS: orange/blue theme, hide Gradio chrome ---
 custom_css = """
-body { background-color: #FFF4E6; }
-.gradio-container { background-color: #FFF4E6 !important; }
+/* Hide Gradio default API docs link, settings, footer */
+a[href*="api-docs"], footer,
+button[aria-label="Settings"], button[aria-label="Profile"] { display: none !important; }
+
+/* Hide download and fullscreen buttons */
+button[aria-label="Download"], button[aria-label="Fullscreen"] {
+    display: none !important;
+}
+
+/* Theme */
+body { background-color: #F9FAFB; font-family: Arial, sans-serif; }
+.gradio-container { background-color: #F9FAFB !important; }
+
+/* Buttons */
 button {
-    background-color: #FF8C42 !important;
+    background-color: #FF7F50 !important; /* orange */
     color: white !important;
     font-weight: bold !important;
-    border-radius: 8px !important;
-    padding: 10px 16px !important;
+    border-radius: 6px !important;
+    padding: 8px 14px !important;
 }
-button:hover { background-color: #FF6F00 !important; }
+button:hover { background-color: #2563EB !important; } /* blue hover */
+
+/* Inputs */
 textarea, input, select {
-    border: 2px solid #FFB366 !important;
+    border: 1px solid #CBD5E1 !important;
     border-radius: 6px !important;
 }
-.markdown {
-    background-color: #FFEBD6 !important;
-    padding: 10px; border-radius: 6px;
+/* Logo container */
+.logo-container {
+    background-color: white;
+    text-align: center;
+    padding: 10px;
 }
+/* Tabs */
+.tab-nav button[aria-selected="true"] {
+    background-color: #2563EB !important; /* active tab blue */
+    color: white !important;
+    font-weight: bold !important;
+}
+.tab-nav button {
+    background-color: #FF7F50 !important; /* inactive tab orange */
+    color: white !important;
+}
+
+/* Console styles */
 .success { color: green; font-weight: bold; }
 .error { color: red; font-weight: bold; }
-.warning { color: #FF6F00; font-weight: bold; }
+.warning { color: #F59E0B; font-weight: bold; }
 """
 
-# --------------- Helpers ---------------
+# --- Helpers ---
 def append_console(prev, msg, level="info"):
     return (prev or "") + f"<div class='{level}'>[{level.upper()}] {msg}</div>"
 
-def clear_console():
-    return ""
+def reset_all():
+    return {}, {}, None, "", "", "", "", "", ""
 
 def load_spec(file, console):
     if not file:
         return {}, "No file uploaded", [], append_console(console, "No file uploaded", "warning")
     try:
-        spec = json.load(open(file.name, encoding="utf-8"))
-        spec = spec.get('spec')
-        tables = [t["name"] for t in spec.get("tables", [])]
-        summary = f"Source: {spec.get('source_name')} | Tables: {', '.join(tables)}"
+        with open(file.name, encoding="utf-8") as f:
+            raw = json.load(f)
+        spec = raw.get("spec", {})
+        tables = [t.get("name", "") for t in spec.get("tables", [])]
+        summary = f"Source: {spec.get('source_name', 'unknown')} | Tables: {', '.join(tables) if tables else 'none'}"
         return spec, summary, tables, append_console(console, "Spec loaded successfully", "success")
     except Exception as e:
         return {}, "", [], append_console(console, f"Failed to parse JSON: {e}", "error")
 
 def save_config(spec, staging_mat, mart_mat, stg_prefix, mart_suffix, console):
-    if not isinstance(spec, dict) or "source_name" not in spec or "tables" not in spec:
+    if not isinstance(spec, dict) or "tables" not in spec:
         return {}, "Invalid or missing spec", append_console(console, "Invalid or missing spec", "error")
     payload = {
         "spec": spec,
@@ -70,8 +97,12 @@ def api_call(endpoint, payload, console):
     try:
         resp = requests.post(f"{API}{endpoint}", json=payload)
         if resp.status_code >= 400:
-            # Show exact server error JSON for transparency
-            return json.dumps(resp.json(), indent=2), append_console(console, f"Error {resp.status_code} on {endpoint}", "error")
+            text = resp.text
+            try:
+                text = json.dumps(resp.json(), indent=2)
+            except:
+                pass
+            return text, append_console(console, f"Error {resp.status_code} on {endpoint}", "error")
         data = resp.json()
         return json.dumps(data, indent=2), append_console(console, f"OK {endpoint}", "success")
     except Exception as e:
@@ -85,12 +116,11 @@ def run_simple(endpoint, console):
         return logs.strip(), append_console(console, f"OK {endpoint}", "success")
     except Exception as e:
         return "", append_console(console, f"Request failed: {e}", "error")
-# NEW: Git push logic
+
 def git_push_ui(commit_msg, console):
     if not commit_msg.strip():
         return "Commit message required", append_console(console, "Commit message required", "error")
     try:
-        # Run git commands in REPO_PATH
         cmds = [
             ["git", "-C", REPO_PATH, "add", "."],
             ["git", "-C", REPO_PATH, "commit", "-m", commit_msg],
@@ -105,55 +135,68 @@ def git_push_ui(commit_msg, console):
         return logs.strip(), append_console(console, "Git push successful", "success")
     except Exception as e:
         return str(e), append_console(console, f"Git push failed: {e}", "error")
-# --------------- UI ---------------
+
+# --- UI ---
 with gr.Blocks(css=custom_css) as demo:
-    gr.Markdown("# 🚀 dbt Generator UI (Ollama gemma3:4b + FastAPI)\nUpload a spec, configure materializations, preview, generate files, and run dbt.")
+    # Logo section
+    with gr.Row():
+        with gr.Column():
+            gr.HTML("<div class='logo-container'><img src='file/logo.png' height='80'><h2 style='color:#2563EB;'>dbt Wizard Dashboard</h2></div>")
 
     spec_state = gr.State({})
     payload_state = gr.State({})
     console = gr.HTML(label="📜 Console")
 
-    with gr.Tab("Upload spec"):
-        json_file = gr.File(label="Upload JSON spec", file_types=[".json"])
-        summary_box = gr.Textbox(label="Spec summary", interactive=False)
-        table_dropdown = gr.Dropdown(label="Tables", choices=[], allow_custom_value=True)
-        json_file.change(load_spec, [json_file, console], [spec_state, summary_box, table_dropdown, console])
+    with gr.Tabs():
+        with gr.Tab("📂 Upload Spec"):
+            json_file = gr.File(label="Upload JSON spec", file_types=[".json"])
+            summary_box = gr.Textbox(label="Spec summary", interactive=False)
+            table_dropdown = gr.Dropdown(label="Tables", choices=[], allow_custom_value=True)
+            json_file.change(load_spec, [json_file, console], [spec_state, summary_box, table_dropdown, console])
 
-    with gr.Tab("Configure"):
-        staging_mat = gr.Dropdown(choices=["view", "table", "incremental"], value="view",
-                                  label="Staging materialization", allow_custom_value=True)
-        mart_mat = gr.Dropdown(choices=["table", "view", "incremental"], value="table",
-                               label="Mart materialization", allow_custom_value=True)
-        stg_prefix = gr.Textbox(value="stg_", label="Staging prefix")
-        mart_suffix = gr.Textbox(value="_mart", label="Mart suffix")
-        save_btn = gr.Button("Save config")
-        save_btn.click(save_config, [spec_state, staging_mat, mart_mat, stg_prefix, mart_suffix, console],
-                       [payload_state, summary_box, console])
+        with gr.Tab("⚙️ Configure"):
+            staging_mat = gr.Dropdown(choices=["view","table","incremental"], value="view", label="Staging materialization")
+            mart_mat = gr.Dropdown(choices=["table","view","incremental"], value="table", label="Mart materialization")
+            stg_prefix = gr.Textbox(value="stg_", label="Staging prefix")
+            mart_suffix = gr.Textbox(value="_mart", label="Mart suffix")
+            save_btn = gr.Button("Save Config")
+            save_btn.click(save_config, [spec_state, staging_mat, mart_mat, stg_prefix, mart_suffix, console],
+                           [payload_state, summary_box, console])
 
-    with gr.Tab("Preview"):
-        preview_btn = gr.Button("Generate preview")
-        preview_out = gr.Textbox(lines=20, label="Preview output")
-        preview_btn.click(lambda payload, console: api_call("/preview_from_spec", payload, console),
-                          [payload_state, console], [preview_out, console])
+        with gr.Tab("👀 Preview"):
+            preview_btn = gr.Button("Generate Preview")
+            preview_out = gr.Textbox(lines=12, label="Preview Output")
+            preview_btn.click(lambda p,c: api_call("/preview_from_spec", p, c), [payload_state, console], [preview_out, console])
 
-    with gr.Tab("Generate files"):
-        gen_btn = gr.Button("Write dbt files")
-        gen_out = gr.Textbox(lines=20, label="Generation output")
-        gen_btn.click(lambda payload, console: api_call("/generate_from_spec", payload, console),
-                      [payload_state, console], [gen_out, console])
+        with gr.Tab("📁 Generate Files"):
+            gen_btn = gr.Button("Write dbt Files")
+            gen_out = gr.Textbox(lines=12, label="Generation Output")
+            gen_btn.click(lambda p,c: api_call("/generate_from_spec", p, c), [payload_state, console], [gen_out, console])
 
-    with gr.Tab("Run dbt"):
-        build_btn = gr.Button("dbt build")
-        test_btn = gr.Button("dbt test")
-        logs_box = gr.Textbox(lines=16, label="dbt logs")
-        build_btn.click(lambda console: run_simple("/build", console), [console], [logs_box, console])
-        test_btn.click(lambda console: run_simple("/test", console), [console], [logs_box, console])
-    with gr.Tab("Git"):
-        commit_msg = gr.Textbox(label="Commit message", placeholder="Enter commit message")
-        gitpush_btn = gr.Button("Git Push")
-        gitpush_out = gr.Textbox(lines=12, label="Git Push logs")
-        gitpush_btn.click(git_push_ui, [commit_msg, console], [gitpush_out, console])
-    clear_btn = gr.Button("Clear console")
-    clear_btn.click(clear_console, None, console)
+        with gr.Tab("🚀 Run dbt"):
+            with gr.Row():
+                build_btn = gr.Button("dbt build")
+                test_btn = gr.Button("dbt test")
+            logs_box = gr.Textbox(lines=12, label="dbt Logs")
+            build_btn.click(lambda c: run_simple("/build", c), [console], [logs_box, console])
+            test_btn.click(lambda c: run_simple("/test", c), [console], [logs_box, console])
 
+        with gr.Tab("🔗 Git"):
+            commit_msg = gr.Textbox(label="Commit message", placeholder="Enter commit message")
+            gitpush_btn = gr.Button("Git Push")
+            gitpush_out = gr.Textbox(lines=10, label="Git Push Logs")
+            gitpush_btn.click(git_push_ui, [commit_msg, console], [gitpush_out, console])
+
+    # Console always visible
+    gr.Markdown("### 📝 Console Log")
+    console_display = console
+
+
+    # Reset button
+    reset_btn = gr.Button("🔄 Reset")
+    reset_btn.click(reset_all, None,
+                    [spec_state, payload_state, json_file, summary_box, preview_out, gen_out, logs_box, gitpush_out, console]
+                    )
+
+# Launch the app
 demo.launch()
