@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from settings import DBT_MODELS_PATH, DBT_PROJECT_PATH
 import settings
-
+import shutil
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="dbt Generator Service (deterministic + AI optional)")
@@ -282,6 +282,13 @@ FROM {{{{ ref('{staging_model_name}') }}}}
         return {"message": f"❌ Failed to generate dbt files: {str(e)}", "previews": {}}
 
 def ensure_dirs() -> None:
+    # Remove everything inside DBT_MODELS_PATH
+    if os.path.exists(DBT_MODELS_PATH):
+        shutil.rmtree(DBT_MODELS_PATH)
+
+    # Recreate base directory
+    os.makedirs(DBT_MODELS_PATH, exist_ok=True)
+
     os.makedirs(os.path.join(settings.DBT_MODELS_PATH, "staging"), exist_ok=True)
     os.makedirs(os.path.join(settings.DBT_MODELS_PATH, "marts"), exist_ok=True)
 
