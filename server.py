@@ -9,7 +9,7 @@ import yaml
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-
+from settings import DBT_MODELS_PATH, DBT_PROJECT_PATH
 import settings
 
 logging.basicConfig(level=logging.INFO)
@@ -182,6 +182,105 @@ def validate_sql(sql_text: str) -> bool:
 
 # ---------------- Helpers ----------------
 
+def generate_dbt_files(spec_json):
+    """
+    Generate dbt models (staging + marts) and schema.yml
+    based on the provided JSON spec and options.
+    Returns previews of all generated files.
+    """
+    try:
+        # Normalize input to dict if it's a custom object
+        if hasattr(spec_json, "dict"):
+            spec_json = spec_json.dict()
+        elif hasattr(spec_json, "__dict__"):
+            spec_json = spec_json.__dict__
+
+        # Extract spec and options
+        spec = spec_json.get("spec", spec_json)
+        options = spec_json.get("options", {})
+
+        source_name = spec["source_name"]
+
+        # --- Ensure base directories exist ---
+        ensure_dirs()
+
+
+        # --- Initialize schema.yml structure ---
+        schema_dict = {"version": 2, "sources": [], "models": []}
+        source_block = {"name": source_name, "schema": spec.get("schema", source_name), "tables": []}
+
+        # Collect previews
+        previews = {}
+
+        # --- Process each table ---
+        for table in spec["tables"]:
+            table_name = table["name"]
+            columns = table["columns"]
+
+            # Build SELECT statement for staging
+            select_columns = ",\n    ".join([f"{col['name']} AS {col['name']}" for col in columns])
+
+            # --- Staging model SQL ---
+            staging_model_name = f"{options.get('naming_convention_staging_prefix', 'stg_')}{table_name}"
+            staging_sql = f"""
+{{{{ config(materialized='{options.get('staging_materialization', 'view')}') }}}}
+
+SELECT
+    {select_columns}
+FROM {{{{ source('{source_name}', '{table_name}') }}}}
+"""
+            staging_file = os.path.join(settings.DBT_MODELS_PATH, "staging", f"{staging_model_name}.sql")
+
+            with open(staging_file, "w") as f:
+                f.write(staging_sql.strip())
+            previews[staging_file] = staging_sql.strip()
+
+            # --- Mart model SQL (if enabled) ---
+            if spec.get("generate_marts", False):
+                mart_model_name = f"{table_name}{options.get('naming_convention_mart_suffix', '_mart')}"
+                marts_sql = f"""
+{{{{ config(materialized='{options.get('mart_materialization', 'table')}') }}}}
+
+SELECT
+    *
+FROM {{{{ ref('{staging_model_name}') }}}}
+"""
+                marts_file = os.path.join(settings.DBT_MODELS_PATH, "marts", f"{mart_model_name}.sql")
+
+                with open(marts_file, "w") as f:
+                    f.write(marts_sql.strip())
+                previews[marts_file] = marts_sql.strip()
+
+            # --- Update schema.yml ---
+            table_entry = {"name": table_name}
+            if options.get("include_docs", False):
+                table_entry["description"] = table.get("description", "")
+            source_block["tables"].append(table_entry)
+
+            schema_dict["models"].append({
+                "name": staging_model_name,
+                "description": f"Staging model for {table_name}" if options.get("include_docs", False) else ""
+            })
+            if spec.get("generate_marts", False):
+                schema_dict["models"].append({
+                    "name": mart_model_name,
+                    "description": f"Mart model for {table_name}" if options.get("include_docs", False) else ""
+                })
+
+        schema_dict["sources"].append(source_block)
+
+        # --- Write schema.yml (if enabled) ---
+        if spec.get("generate_model_schema_yml", False):
+            schema_file = os.path.join(DBT_MODELS_PATH, "schema.yml")
+            with open(schema_file, "w") as f:
+                yaml.dump(schema_dict, f, sort_keys=False)
+            previews[schema_file] = yaml.dump(schema_dict, sort_keys=False)
+
+        return {"message": "✅ dbt models and schema.yml generated successfully.", "previews": previews}
+
+    except Exception as e:
+        return {"message": f"❌ Failed to generate dbt files: {str(e)}", "previews": {}}
+
 def ensure_dirs() -> None:
     os.makedirs(os.path.join(settings.DBT_MODELS_PATH, "staging"), exist_ok=True)
     os.makedirs(os.path.join(settings.DBT_MODELS_PATH, "marts"), exist_ok=True)
@@ -232,8 +331,13 @@ def dbt_run(cmd: List[str], timeout: Optional[int] = None) -> Dict[str, Any]:
 
 @app.post("/generate_from_spec")
 def generate_from_spec(payload: InteractivePayload):
+
     spec = payload.spec
     options = payload.options
+
+    if not settings.USE_GOOGLE_AI and not settings.OLLAMA_ENABLED:
+       return generate_dbt_files(payload)
+
     ensure_dirs()
 
     results = {}
@@ -290,6 +394,8 @@ def preview_from_spec(payload: InteractivePayload):
     spec = payload.spec
     options = payload.options
     previews = {}
+    if not settings.USE_GOOGLE_AI and not settings.OLLAMA_ENABLED:
+        return generate_dbt_files(spec)
 
     for t in spec.tables:
         deterministic_sql = staging_sql(t, spec.source_name, options)
