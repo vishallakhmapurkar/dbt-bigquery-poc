@@ -4,25 +4,27 @@ import json
 import subprocess
 import os
 from settings import REPO_PATH
+
 API = "http://localhost:8000"
 
 # --------------- CSS Theme ---------------
 custom_css = """
+<style>
 html, body {
-    background: #FFFFFF;   /* default white background */
+    background: #FFFFFF;
     margin: 0;
     padding: 0;
 }
 
 .gradio-container {
-    background: #FFFFFF;   /* light orange container */
+    background: #FFFFFF;
     color: #333333;
     font-family: 'Segoe UI', sans-serif;
 }
 
 /* Headings */
 h1, h2, h3, .markdown h1, .markdown h2 {
-    color: #FF6600; /* orange */
+    color: #FF6600;
     text-shadow: 0 0 4px #FFB366;
 }
 
@@ -91,39 +93,34 @@ footer {
     display: none !important;
 }
 
-
-
 .logo-text {
     font-family: 'Orbitron', sans-serif;
     font-size: 32px;
     font-weight: 700;
-    text-align: left;   /* align to left */
+    text-align: left;
     margin: 15px 0;
 }
 
 .logo-text .dbt {
-    color: #194B63; /* blue */
+    color: #194B63;
     text-shadow: 0 0 6px #66B2FF;
 }
 
 .logo-text .arrow {
-    color: #FF6600; /* orange */
+    color: #FF6600;
     text-shadow: 0 0 6px #FFB366;
 }
 
 .logo-text .gen {
-    color: #194B63; /* blue */
+    color: #194B63;
     text-shadow: 0 0 6px #66B2FF;
 }
+</style>
 """
-
-
-
 
 # --------------- Helpers ---------------
 def append_console(prev, msg, level="info"):
     return (prev or "") + f"<div class='{level}'>[{level.upper()}] {msg}</div>"
-
 
 def clear_console():
     return ""
@@ -160,7 +157,6 @@ def api_call(endpoint, payload, console):
     try:
         resp = requests.post(f"{API}{endpoint}", json=payload)
         if resp.status_code >= 400:
-            # Show exact server error JSON for transparency
             return json.dumps(resp.json(), indent=2), append_console(console, f"Error {resp.status_code} on {endpoint}", "error")
         data = resp.json()
         return json.dumps(data, indent=2), append_console(console, f"OK {endpoint}", "success")
@@ -175,12 +171,11 @@ def run_simple(endpoint, console):
         return logs.strip(), append_console(console, f"OK {endpoint}", "success")
     except Exception as e:
         return "", append_console(console, f"Request failed: {e}", "error")
-# NEW: Git push logic
+
 def git_push_ui(commit_msg, console):
     if not commit_msg.strip():
         return "Commit message required", append_console(console, "Commit message required", "error")
     try:
-        # Run git commands in REPO_PATH
         cmds = [
             ["git", "-C", REPO_PATH, "add", "."],
             ["git", "-C", REPO_PATH, "commit", "-m", commit_msg],
@@ -195,8 +190,12 @@ def git_push_ui(commit_msg, console):
         return logs.strip(), append_console(console, "Git push successful", "success")
     except Exception as e:
         return str(e), append_console(console, f"Git push failed: {e}", "error")
+
 # --------------- UI ---------------
-with gr.Blocks(title="dbt>Gen",css=custom_css) as demo:
+with gr.Blocks(title="dbt>Gen") as demo:
+    # Inject CSS manually
+    gr.HTML(custom_css)
+
     gr.Markdown("""
 <div class="logo-text">
    🚀 <span class="dbt">dbt</span><span class="arrow">&gt;</span><span class="gen">Gen</span>
