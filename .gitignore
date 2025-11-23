@@ -7,3 +7,10 @@
 
 # Ignore Python cache directories
 __pycache__/
+
+/dbt-bigquery-poc.iml
+/.gradio/
+/.venv/
+/.idea/
+/.env
+/__pycache__/
