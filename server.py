@@ -184,39 +184,31 @@ def validate_sql(sql_text: str) -> bool:
 
 def generate_dbt_files(spec_json):
     """
-    Generate dbt models (staging + marts) and schema.yml
-    based on the provided JSON spec and options.
+    Generate dbt models (staging + marts) and per-model schema.yml files.
+    Global schema.yml will only contain sources (no models).
     Returns previews of all generated files.
     """
     try:
-        # If input is a JSON string, parse it
+        # Normalize input
         if isinstance(spec_json, str):
-            import json
             spec_json = json.loads(spec_json)
-
-        # If it's a custom object, normalize
         elif hasattr(spec_json, "dict"):
             spec_json = spec_json.dict()
         elif hasattr(spec_json, "__dict__"):
             spec_json = dict(spec_json.__dict__)
 
-        # Now spec_json is guaranteed to be a dict
-        spec = spec_json.get("spec", spec_json)
-        options = spec_json.get("options", spec_json)
-
-
-        print("DEBUG Options:", options)
+        spec = spec_json.get("spec", {})
+        options = spec_json.get("options", {})
 
         source_name = spec["source_name"]
 
         # --- Ensure base directories exist ---
         ensure_dirs()
 
-        # --- Initialize schema.yml structure ---
-        schema_dict = {"version": 2, "sources": [], "models": []}
+        # --- Global schema.yml (sources only) ---
+        global_schema_dict = {"version": 2, "sources": []}
         source_block = {"name": source_name, "schema": spec.get("schema", source_name), "tables": []}
 
-        # Collect previews
         previews = {}
 
         # --- Process each table ---
@@ -241,7 +233,27 @@ FROM {{{{ source('{source_name}', '{table_name}') }}}}
                 f.write(staging_sql.strip())
             previews[staging_file] = staging_sql.strip()
 
-            # --- Mart model SQL (if enabled) ---
+            # --- Staging schema.yml ---
+            staging_schema = {
+                "version": 2,
+                "models": [{
+                    "name": staging_model_name,
+                    "description": f"Staging model for {table_name}" if options.get("include_docs", False) else "",
+                    "columns": [
+                        {
+                            "name": col["name"],
+                            "description": col.get("description", "") if options.get("include_docs", False) else ""
+                        }
+                        for col in columns
+                    ]
+                }]
+            }
+            staging_schema_file = os.path.join(settings.DBT_MODELS_PATH, "staging", f"{staging_model_name}.yml")
+            with open(staging_schema_file, "w") as f:
+                yaml.dump(staging_schema, f, sort_keys=False)
+            previews[staging_schema_file] = yaml.dump(staging_schema, sort_keys=False)
+
+            # --- Mart model SQL + schema.yml ---
             if spec.get("generate_marts", False):
                 mart_model_name = f"{table_name}{options.get('naming_convention_mart_suffix', '_mart')}"
                 marts_sql = f"""
@@ -256,32 +268,42 @@ FROM {{{{ ref('{staging_model_name}') }}}}
                     f.write(marts_sql.strip())
                 previews[marts_file] = marts_sql.strip()
 
-            # --- Update schema.yml ---
+                # Mart schema.yml
+                mart_schema = {
+                    "version": 2,
+                    "models": [{
+                        "name": mart_model_name,
+                        "description": f"Mart model for {table_name}" if options.get("include_docs", False) else "",
+                        "columns": [
+                            {
+                                "name": col["name"],
+                                "description": col.get("description", "") if options.get("include_docs", False) else ""
+                            }
+                            for col in columns
+                        ]
+                    }]
+                }
+                mart_schema_file = os.path.join(settings.DBT_MODELS_PATH, "marts", f"{mart_model_name}.yml")
+                with open(mart_schema_file, "w") as f:
+                    yaml.dump(mart_schema, f, sort_keys=False)
+                previews[mart_schema_file] = yaml.dump(mart_schema, sort_keys=False)
+
+            # --- Update global sources only ---
             table_entry = {"name": table_name}
             if options.get("include_docs", False):
                 table_entry["description"] = table.get("description", "")
             source_block["tables"].append(table_entry)
 
-            schema_dict["models"].append({
-                "name": staging_model_name,
-                "description": f"Staging model for {table_name}" if options.get("include_docs", False) else ""
-            })
-            if spec.get("generate_marts", False):
-                schema_dict["models"].append({
-                    "name": mart_model_name,
-                    "description": f"Mart model for {table_name}" if options.get("include_docs", False) else ""
-                })
+        global_schema_dict["sources"].append(source_block)
 
-        schema_dict["sources"].append(source_block)
-
-        # --- Write schema.yml (if enabled) ---
+        # --- Write global schema.yml (sources only) ---
         if spec.get("generate_model_schema_yml", False):
             schema_file = os.path.join(settings.DBT_MODELS_PATH, "schema.yml")
             with open(schema_file, "w") as f:
-                yaml.dump(schema_dict, f, sort_keys=False)
-            previews[schema_file] = yaml.dump(schema_dict, sort_keys=False)
+                yaml.dump(global_schema_dict, f, sort_keys=False)
+            previews[schema_file] = yaml.dump(global_schema_dict, sort_keys=False)
 
-        return {"message": "✅ dbt models and schema.yml generated successfully.", "previews": previews}
+        return {"message": "✅ dbt models and per-model schema.yml files generated successfully.", "previews": previews}
 
     except Exception as e:
         return {"message": f"❌ Failed to generate dbt files: {str(e)}", "previews": {}}
