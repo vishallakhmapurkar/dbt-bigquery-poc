@@ -189,21 +189,28 @@ def generate_dbt_files(spec_json):
     Returns previews of all generated files.
     """
     try:
-        # Normalize input to dict if it's a custom object
-        if hasattr(spec_json, "dict"):
+        # If input is a JSON string, parse it
+        if isinstance(spec_json, str):
+            import json
+            spec_json = json.loads(spec_json)
+
+        # If it's a custom object, normalize
+        elif hasattr(spec_json, "dict"):
             spec_json = spec_json.dict()
         elif hasattr(spec_json, "__dict__"):
-            spec_json = spec_json.__dict__
+            spec_json = dict(spec_json.__dict__)
 
-        # Extract spec and options
+        # Now spec_json is guaranteed to be a dict
         spec = spec_json.get("spec", spec_json)
-        options = spec_json.get("options", {})
+        options = spec_json.get("options", spec_json)
+
+
+        print("DEBUG Options:", options)
 
         source_name = spec["source_name"]
 
         # --- Ensure base directories exist ---
         ensure_dirs()
-
 
         # --- Initialize schema.yml structure ---
         schema_dict = {"version": 2, "sources": [], "models": []}
@@ -213,7 +220,7 @@ def generate_dbt_files(spec_json):
         previews = {}
 
         # --- Process each table ---
-        for table in spec["tables"]:
+        for table in spec.get("tables", []):
             table_name = table["name"]
             columns = table["columns"]
 
@@ -230,7 +237,6 @@ SELECT
 FROM {{{{ source('{source_name}', '{table_name}') }}}}
 """
             staging_file = os.path.join(settings.DBT_MODELS_PATH, "staging", f"{staging_model_name}.sql")
-
             with open(staging_file, "w") as f:
                 f.write(staging_sql.strip())
             previews[staging_file] = staging_sql.strip()
@@ -246,7 +252,6 @@ SELECT
 FROM {{{{ ref('{staging_model_name}') }}}}
 """
                 marts_file = os.path.join(settings.DBT_MODELS_PATH, "marts", f"{mart_model_name}.sql")
-
                 with open(marts_file, "w") as f:
                     f.write(marts_sql.strip())
                 previews[marts_file] = marts_sql.strip()
@@ -271,7 +276,7 @@ FROM {{{{ ref('{staging_model_name}') }}}}
 
         # --- Write schema.yml (if enabled) ---
         if spec.get("generate_model_schema_yml", False):
-            schema_file = os.path.join(DBT_MODELS_PATH, "schema.yml")
+            schema_file = os.path.join(settings.DBT_MODELS_PATH, "schema.yml")
             with open(schema_file, "w") as f:
                 yaml.dump(schema_dict, f, sort_keys=False)
             previews[schema_file] = yaml.dump(schema_dict, sort_keys=False)
@@ -402,7 +407,7 @@ def preview_from_spec(payload: InteractivePayload):
     options = payload.options
     previews = {}
     if not settings.USE_GOOGLE_AI and not settings.OLLAMA_ENABLED:
-        return generate_dbt_files(spec)
+        return generate_dbt_files(payload)
 
     for t in spec.tables:
         deterministic_sql = staging_sql(t, spec.source_name, options)

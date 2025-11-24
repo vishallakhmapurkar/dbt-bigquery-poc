@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 # Toggle providers
 OLLAMA_ENABLED = False
-USE_GOOGLE_AI = True
+USE_GOOGLE_AI = False
 
 # Ollama
 OLLAMA_URL = "http://localhost:11434/api/generate"
