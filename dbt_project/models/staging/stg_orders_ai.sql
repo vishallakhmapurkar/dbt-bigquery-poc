@@ -5,4 +5,5 @@ SELECT
     customer_id,
     order_date,
     status
-FROM {{ source('dbt_vlakhmapurkar', 'orders') }}
+FROM
+    {{ source('dbt_vlakhmapurkar', 'orders') }}
