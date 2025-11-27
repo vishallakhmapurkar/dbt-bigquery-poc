@@ -30,17 +30,17 @@ h1, h2, h3, .markdown h1, .markdown h2 {
 
 /* Buttons */
 button {
-    background-color: #FF6600 !important;
+    background: linear-gradient(180deg, #FF6600 0%, #FF8C42 100%) !important;
     color: #fff !important;
-    font-weight: bold !important;
+    font-weight: 700 !important;
     border-radius: 8px !important;
     padding: 10px 16px !important;
     box-shadow: 0 0 6px #FFB366;
-    transition: transform 0.1s ease-in-out;
+    transition: all 0.2s ease-in-out;
 }
 button:hover {
     transform: scale(1.05);
-    background-color: #FF8C42 !important;
+    background: linear-gradient(180deg, #FF8C42 0%, #FF6600 100%) !important;
     box-shadow: 0 0 10px #FFB366;
 }
 
@@ -55,16 +55,27 @@ textarea, input, select {
 
 /* Tabs */
 .gradio-tab {
-    background-color: #FFEBD6 !important;
+    background: linear-gradient(180deg, #FFF5EC 0%, #FFE0C2 100%) !important;
     color: #FF6600 !important;
-    font-weight: bold;
-    border-radius: 6px;
-    padding: 10px;
+    font-weight: 900; /* ultra-bold */
+    letter-spacing: 0.5px;
+    border-radius: 0px; /* rectangular */
+    padding: 12px 18px;
+    border: 2px solid #FF6600;
+    box-shadow: 0 2px 4px rgba(255, 179, 102, 0.4);
+    transition: all 0.2s ease-in-out;
+}
+.gradio-tab:hover {
+    background: linear-gradient(180deg, #FFEBD6 0%, #FFD1A3 100%) !important;
+    box-shadow: 0 4px 8px rgba(255, 179, 102, 0.6);
 }
 .gradio-tab.gradio-tab-active {
-    background-color: #FF6600 !important;
+    background: linear-gradient(180deg, #FF6600 0%, #FF8C42 100%) !important;
     color: #FFFFFF !important;
-    text-shadow: 0 0 4px #FFB366;
+    font-weight: 900;
+    text-shadow: 0 0 6px #FFB366;
+    border: 2px solid #FF6600;
+    box-shadow: inset 0 0 6px rgba(255, 179, 102, 0.8);
 }
 
 /* Console terminal */
@@ -93,6 +104,7 @@ footer {
     display: none !important;
 }
 
+/* Logo text */
 .logo-text {
     font-family: 'Orbitron', sans-serif;
     font-size: 32px;
@@ -116,6 +128,7 @@ footer {
     text-shadow: 0 0 6px #66B2FF;
 }
 </style>
+
 """
 
 # --------------- Helpers ---------------
