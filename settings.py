@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 # Toggle providers
 OLLAMA_ENABLED = False
-USE_GOOGLE_AI = True
+USE_GOOGLE_AI = False
 
 # Ollama
 OLLAMA_URL = "http://localhost:11434/api/generate"
@@ -24,4 +24,4 @@ DEFAULT_MART_MATERIALIZATION = "table"
 DEFAULT_STAGING_PREFIX = "stg_"
 DEFAULT_MART_SUFFIX = "_mart"
 VALID_MATERIALIZATIONS = {"view", "table", "incremental"}
-DBT_TIMEOUT_SEC = 60
+DBT_TIMEOUT_SEC = 600

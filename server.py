@@ -347,11 +347,12 @@ def dbt_run(cmd: List[str], timeout: Optional[int] = None) -> Dict[str, Any]:
     """
     Run a dbt command and capture output.
     """
-    timeout = timeout or settings.DBT_TIMEOUT_SEC
+    timeout = settings.DBT_TIMEOUT_SEC
     cwd = settings.DBT_PROJECT_PATH
     try:
         proc = subprocess.run(["dbt"] + cmd, cwd=cwd,
                               capture_output=True, text=True, timeout=timeout)
+
         return {"returncode": proc.returncode,
                 "stdout": proc.stdout,
                 "stderr": proc.stderr}
