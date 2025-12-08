@@ -81,12 +81,13 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+  align-items: start; /* <-- important: stop stretching */
 }
+
 .form-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
+  align-self: start; /* keep commit box + button at natural height */
 }
+
 
 /* Inputs & buttons */
 input[type="text"], select, input[type="file"] {
