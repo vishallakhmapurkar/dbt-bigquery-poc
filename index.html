@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>dbt&gt;Gen Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
+    <link rel="shortcut icon" type="image/x-icon" href="/static/favicon.ico" />
+
+</head>
+<body>
+<aside class="sidebar">
+    <section class="card logo">
+        <img src="/static/logo.png" height="60px" width="100%"/>
+    </section>
+    <button class="nav-btn active" data-tab="upload">Upload Spec</button>
+    <button class="nav-btn" data-tab="config">Configure</button>
+    <button class="nav-btn" data-tab="preview">Preview</button>
+    <button class="nav-btn" data-tab="generate">Generate Files</button>
+    <button class="nav-btn" data-tab="run">Run dbt</button>
+    <button class="nav-btn" data-tab="git">Git</button>
+    <div class="spacer"></div>
+    <button class="nav-btn secondary" id="clearConsole">Clear Console</button>
+</aside>
+
+<main class="main">
+
+    <section class="card" id="upload" data-tab>
+        <h2>Upload spec</h2>
+        <div class="grid">
+            <div>
+                <input type="file" id="jsonFile" accept=".json" />
+                <button class="primary" id="btnUpload">Upload</button>
+            </div>
+            <div>
+                <h4>Summary</h4>
+                <pre id="uploadSummary"></pre>
+            </div>
+        </div>
+    </section>
+
+    <section class="card hidden" id="config" data-tab>
+        <h2>Configure</h2>
+        <div class="grid">
+            <div class="form-grid">
+                <label>Staging materialization</label>
+                <select id="stagingMat">
+                    <option>view</option>
+                    <option>table</option>
+                    <option>incremental</option>
+                </select>
+
+                <label>Mart materialization</label>
+                <select id="martMat">
+                    <option>table</option>
+                    <option>view</option>
+                    <option>incremental</option>
+                </select>
+
+                <label>Staging prefix</label>
+                <input type="text" id="stgPrefix" value="stg_" />
+
+                <label>Mart suffix</label>
+                <input type="text" id="martSuffix" value="_mart" />
+            </div>
+            <div>
+                <button class="primary" id="btnSaveConfig">Save config</button>
+                <h4>Result</h4>
+                <pre id="configResult"></pre>
+            </div>
+        </div>
+    </section>
+
+    <section class="card hidden" id="preview" data-tab>
+        <h2>Preview</h2>
+        <button class="primary" id="btnPreview">Generate preview</button>
+        <pre id="previewOut" class="log"></pre>
+    </section>
+
+    <section class="card hidden" id="generate" data-tab>
+        <h2>Generate files</h2>
+        <button class="primary" id="btnGenerate">Write dbt files</button>
+        <pre id="generateOut" class="log"></pre>
+    </section>
+
+    <section class="card hidden" id="run" data-tab>
+        <h2>Run dbt</h2>
+        <div class="grid">
+            <div>
+                <button class="primary" id="btnBuild">dbt build</button>
+                <button class="primary" id="btnTest">dbt test</button>
+            </div>
+            <div>
+                <h4>Logs</h4>
+                <pre id="dbtLogs" class="log"></pre>
+            </div>
+        </div>
+    </section>
+
+    <section class="card hidden" id="git" data-tab>
+        <h2>Git</h2>
+        <div class="grid">
+            <div class="form-grid">
+                <label>Commit message</label>
+                <input type="text" id="commitMsg" placeholder="Enter commit message" />
+                <button class="primary" id="btnGitPush">Git Push</button>
+            </div>
+            <div>
+                <h4>Git logs</h4>
+                <pre id="gitLogs" class="log"></pre>
+            </div>
+        </div>
+    </section>
+
+    <section class="card console">
+        <h3>Console</h3>
+        <pre id="consoleBox"></pre>
+    </section>
+
+
+</main>
+
+<script src="/static/app.js"></script>
+<!-- Spinner overlay -->
+<div id="spinnerOverlay">
+    <div class="spinner"></div>
+</div>
+
+</body>
+</html>
