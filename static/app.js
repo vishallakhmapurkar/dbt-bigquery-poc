@@ -1,13 +1,36 @@
 // Helpers
 const consoleBox = document.getElementById("consoleBox");
+
 function log(level, msg) {
-  const line = `[${level.toUpperCase()}] ${msg}\n`;
-  consoleBox.textContent += line;
+  const line = document.createElement("div");
+  line.className = `console-line ${level.toLowerCase()}`;
+
+  const icon = document.createElement("span");
+  icon.className = "console-icon";
+
+  switch (level.toLowerCase()) {
+    case "info":  icon.textContent = "ℹ"; break;
+    case "warn":  icon.textContent = "⚠"; break;
+    case "error": icon.textContent = "✖"; break;
+    case "success": icon.textContent = "✔"; break;
+    default:      icon.textContent = "•";
+  }
+
+  const timestamp = new Date().toLocaleTimeString();
+  const text = document.createElement("span");
+  text.textContent = `[${timestamp}] [${level.toUpperCase()}] ${msg}`;
+
+  line.appendChild(icon);
+  line.appendChild(text);
+  consoleBox.appendChild(line);
   consoleBox.scrollTop = consoleBox.scrollHeight;
 }
+
 document.getElementById("clearConsole").addEventListener("click", () => {
-  consoleBox.textContent = "";
+  consoleBox.innerHTML = "";
 });
+
+
 
 // Navigation
 const tabs = document.querySelectorAll("[data-tab]");
@@ -30,7 +53,7 @@ let lastConfigPayload = null;
 document.getElementById("btnUpload").addEventListener("click", async () => {
   const fileInput = document.getElementById("jsonFile");
   if (!fileInput.files[0]) {
-    log("warning", "No file selected");
+    log("warn", "No file selected");
     return;
   }
   const formData = new FormData();
@@ -42,7 +65,7 @@ document.getElementById("btnUpload").addEventListener("click", async () => {
 
     lastSpec = data.raw || null;
     document.getElementById("uploadSummary").textContent =
-      JSON.stringify({ source: data.source, tables: data.tables }, null, 2);
+      JSON.stringify( lastSpec , null, 2);
     log("success", "Spec uploaded successfully");
   } catch (err) {
     log("error", err.message);
@@ -149,7 +172,7 @@ document.getElementById("btnGitPush").addEventListener("click", async () => {
   const logs = document.getElementById("gitLogs");
   logs.textContent = "";
   if (!msg.trim()) {
-    log("warning", "Commit message required");
+    log("warn", "Commit message required");
     return;
   }
   try {

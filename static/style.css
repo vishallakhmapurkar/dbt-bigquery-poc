@@ -16,6 +16,16 @@ body {
   display: flex;
   height: 100vh;
 }
+#uploadSummary {
+  background: #FAFCFF;
+  border: 1px solid #E6EFFB;
+  border-radius: 8px;
+  padding: 12px;
+  max-height: 240px;   /* fixed height */
+  overflow-y: auto;    /* scrollable */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+  white-space: pre-wrap; /* wrap long lines nicely */
+}
 
 /* Sidebar */
 .sidebar {
@@ -104,7 +114,7 @@ input[type="text"], select, input[type="file"] {
 }
 
 /* Logs / Console */
-pre.log, #consoleBox {
+pre.log {
   background: #FAFCFF;
   border: 1px solid #E6EFFB;
   border-radius: 8px;
@@ -113,6 +123,36 @@ pre.log, #consoleBox {
   overflow: auto;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
+
+.console-box {
+  background: #FAFCFF;
+  border: 1px solid #E6EFFB;
+  border-radius: 8px;
+  padding: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+.console-line {
+  margin: 0;
+  white-space: pre-wrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.console-line.info   { color: #0b6623; }  /* forest green */
+.console-line.warn   { color: #e6b800; }  /* golden yellow */
+.console-line.error  { color: #cc0000; }  /* dark red */
+.console-line.debug  { color: #008b8b; }  /* dark cyan */
+
+
+.console-icon {
+  font-weight: bold;
+}
+
+
 
 /* Console card */
 .card.console pre {
