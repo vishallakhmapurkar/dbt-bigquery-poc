@@ -48,7 +48,9 @@ const tabs = document.querySelectorAll("[data-tab]");
 const navButtons = document.querySelectorAll(".nav-btn");
 
 navButtons.forEach(btn => {
-  btn.addEventListener("click", () => {
+  btn.addEventListener("click", (e) => {
+    e.preventDefault(); // stop <a href> navigation
+
     const target = btn.getAttribute("data-tab");
 
     // Hide all tabbed sections
@@ -68,6 +70,7 @@ navButtons.forEach(btn => {
     }
   });
 });
+
 
 // =======================
 // State
