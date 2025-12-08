@@ -6,6 +6,7 @@
     "tables": [
       {
         "name": "customers",
+        "primary_key": "customer_id",
         "description": "One record per customer.",
         "columns": [
           { "name": "customer_id", "type": "integer", "description": "Primary key" },
@@ -15,6 +16,7 @@
       },
       {
         "name": "orders",
+        "primary_key": "order_id",
         "description": "One record per order. Includes cancelled and deleted orders.",
         "columns": [
           { "name": "order_id", "type": "integer", "description": "Primary key" },

@@ -58,7 +58,8 @@ def build_dbt_prompt(spec: Dict[str, Any], table: Dict[str, Any], options: Dict[
     # Join into readable list
     column_list = "\n".join([f"- {d}" for d in column_details]) or "No columns provided"
     desc = table.get("description", "No description provided")
-
+    # Use primary key if available
+    pk = table.get("primary_key")
     return f"""You are a SQL generator for dbt models targeting BigQuery.
 
 Project Context:
@@ -68,7 +69,7 @@ Project Context:
 - Table: {table.get('name')}
 - Table Description: {desc}
 
-Columns:
+Columns (use only these, in order):
 {column_list}
 
 Requirements:
@@ -76,12 +77,11 @@ Requirements:
 2. At the top include: {{ config(materialized='{options.get('staging_materialization','view')}') }}.
 3. Select from the dbt source macro: {{ source('{spec.get('source_name')}', '{table.get('name')}') }}.
 4. Apply naming conventions:
-   - Rename `id` → `{table.get('name')}_id`
-   - Rename `user_id` → `customer_id`
+   - Use the declared primary key `{pk}` as the identifier column.
    - Keep other columns unchanged.
 5. Preserve column order as in the JSON spec.
-6. Include explicit column aliases for clarity.
-7. Do not add commentary, markdown fences, or explanations — output **only valid SQL code**.
+6. Include explicit column aliases identical to the original names.
+7. Output **only valid SQL code**, no commentary or markdown fences.
 """
 
 
