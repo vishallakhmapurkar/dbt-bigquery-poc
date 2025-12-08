@@ -112,6 +112,16 @@ input[type="text"], select, input[type="file"] {
   transform: translateY(-1px);
   box-shadow: 0 0 12px rgba(30,144,255,0.60);
 }
+#gitLogs {
+  background: #FAFCFF;
+  border: 1px solid #E6EFFB;
+  border-radius: 8px;
+  padding: 12px;
+  max-height: 200px;   /* fixed height */
+  overflow-y: auto;    /* scrollable */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+  white-space: pre-wrap;
+}
 
 /* Logs / Console */
 pre.log {

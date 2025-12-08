@@ -172,7 +172,7 @@ document.getElementById("btnGitPush").addEventListener("click", async () => {
   const logs = document.getElementById("gitLogs");
   logs.textContent = "";
   if (!msg.trim()) {
-    log("warn", "Commit message required");
+    log("warning", "Commit message required");
     return;
   }
   try {
