@@ -13,7 +13,8 @@
     <section class="card logo">
         <img src="/static/logo.png" height="60px" width="100%"/>
     </section>
-    <button class="nav-btn active" data-tab="upload">Upload Spec</button>
+    <button class="nav-btn active" id="btnDashboard" data-tab="dashboard">Dashboard</button>
+    <button class="nav-btn" data-tab="upload">Upload Spec</button>
     <button class="nav-btn" data-tab="config">Configure</button>
     <button class="nav-btn" data-tab="preview">Preview</button>
     <button class="nav-btn" data-tab="generate">Generate Files</button>
@@ -24,8 +25,25 @@
 </aside>
 
 <main class="main">
+    <section class="card" id="dashboard" data-tab>
+        <h2>DBT Artifacts Summary</h2>
+        <div class="grid file-stats">
+            <div class="stat">
+                <h3 id="countStaging">0</h3>
+                <p>Staging Models</p>
+            </div>
+            <div class="stat">
+                <h3 id="countMart">0</h3>
+                <p>Mart Models</p>
+            </div>
+            <div class="stat">
+                <h3 id="countSchema">0</h3>
+                <p>Schema YMLs</p>
+            </div>
+        </div>
+    </section>
 
-    <section class="card" id="upload" data-tab>
+    <section class="card hidden" id="upload" data-tab>
         <h2>Upload spec</h2>
         <div class="grid">
             <div>

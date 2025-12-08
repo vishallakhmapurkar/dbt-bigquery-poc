@@ -26,6 +26,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def count_model_files():
+    counts = {"staging": 0, "mart": 0, "schema": 0}
+    for root, _, files in os.walk(DBT_MODELS_PATH):
+        for file in files:
+            if file.endswith(".sql"):
+                if "staging" in root.lower() or "staging" in file.lower():
+                    counts["staging"] += 1
+                elif "marts" in root.lower() or "marts" in file.lower():
+                    counts["mart"] += 1
+            elif file.endswith((".yml", ".yaml")):
+                counts["schema"] += 1
+    return counts
+
+@app.get("/api/fileCounts")
+async def file_counts():
+    return JSONResponse(content=count_model_files())
+
 def build_dbt_prompt(spec: Dict[str, Any], table: Dict[str, Any], options: Dict[str, Any]) -> str:
     """
     Build a rich dbt SQL generation prompt using full JSON metadata.

@@ -87,6 +87,33 @@ body {
 .form-grid {
   align-self: start; /* keep commit box + button at natural height */
 }
+.file-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.stat {
+  background: var(--white);
+  border: 1px solid #E6EFFB;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.stat h3 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--blue-accent);
+}
+
+.stat p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--text);
+}
 
 
 /* Inputs & buttons */
