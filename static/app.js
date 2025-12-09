@@ -82,10 +82,62 @@ let lastConfigPayload = null;
 // Dashboard
 // =======================
 function updateDashboardCounts(counts) {
+  // Update text counts
   document.getElementById("countStaging").textContent = counts.staging;
   document.getElementById("countMart").textContent = counts.mart;
   document.getElementById("countSchema").textContent = counts.schema;
+
+  // Build SVG pie chart
+  const total = counts.staging + counts.mart + counts.schema;
+  const values = [counts.staging, counts.mart, counts.schema];
+  const labels = ["Staging", "Mart", "Schema"];
+  const colors = ["#3498db", "#e74c3c", "#2ecc71"];
+
+  let cumulativePercent = 0;
+  const radius = 100;
+  const cx = 120, cy = 120; // center
+
+  let svgParts = [`<svg width="240" height="240" viewBox="0 0 240 240">`];
+
+  values.forEach((val, idx) => {
+    const percent = val / total;
+    const startAngle = cumulativePercent * 2 * Math.PI;
+    const endAngle = (cumulativePercent + percent) * 2 * Math.PI;
+
+    const x1 = cx + radius * Math.cos(startAngle);
+    const y1 = cy + radius * Math.sin(startAngle);
+    const x2 = cx + radius * Math.cos(endAngle);
+    const y2 = cy + radius * Math.sin(endAngle);
+
+    const largeArc = percent > 0.5 ? 1 : 0;
+
+    const pathData = [
+      `M ${cx} ${cy}`, // move to center
+      `L ${x1} ${y1}`, // line to start
+      `A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`, // arc
+      `Z` // close path
+    ].join(" ");
+
+    svgParts.push(`
+      <path d="${pathData}" fill="${colors[idx]}">
+        <title>${labels[idx]}: ${val} (${(percent*100).toFixed(1)}%)</title>
+      </path>
+    `);
+
+    cumulativePercent += percent;
+  });
+
+  // Add total in center
+  svgParts.push(`
+    <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle"
+          font-size="25" font-weight="bold" fill="white">${total}</text>
+  `);
+
+  svgParts.push(`</svg>`);
+
+  document.getElementById("pieContainer").innerHTML = svgParts.join("");
 }
+
 
 function fetchDashboardCounts() {
   fetch("/api/fileCounts")
