@@ -1,7 +1,7 @@
 version: 2
 models:
-- name: orders_m
-  description: Mart model for orders
+- name: stg_orders
+  description: Staging model for orders
   columns:
   - name: order_id
     description: Primary key

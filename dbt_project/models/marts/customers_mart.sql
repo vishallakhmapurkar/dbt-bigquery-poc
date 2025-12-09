@@ -2,4 +2,4 @@
 
 SELECT
     *
-FROM {{ ref('v_orders') }}
+FROM {{ ref('stg_customers') }}

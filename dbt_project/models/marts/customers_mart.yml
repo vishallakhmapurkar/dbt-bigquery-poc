@@ -1,7 +1,7 @@
 version: 2
 models:
-- name: v_customers
-  description: Staging model for customers
+- name: customers_mart
+  description: Mart model for customers
   columns:
   - name: customer_id
     description: Primary key
