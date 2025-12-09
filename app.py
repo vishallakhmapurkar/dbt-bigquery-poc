@@ -45,7 +45,8 @@ async def file_counts():
 
 def build_dbt_prompt(spec: Dict[str, Any], table: Dict[str, Any], options: Dict[str, Any]) -> str:
     """
-    Build a rich dbt SQL generation prompt using full JSON metadata.
+    Build a dbt SQL generation prompt using JSON metadata.
+    Ensures BigQuery-friendly syntax and proper dbt conventions.
     """
     # Collect column details
     column_details = []
@@ -58,8 +59,10 @@ def build_dbt_prompt(spec: Dict[str, Any], table: Dict[str, Any], options: Dict[
     # Join into readable list
     column_list = "\n".join([f"- {d}" for d in column_details]) or "No columns provided"
     desc = table.get("description", "No description provided")
+
     # Use primary key if available
     pk = table.get("primary_key")
+
     return f"""You are a SQL generator for dbt models targeting BigQuery.
 
 Project Context:
@@ -74,15 +77,20 @@ Columns (use only these, in order):
 
 Requirements:
 1. Use BigQuery **standard SQL** syntax.
-2. At the top include: {{ config(materialized='{options.get('staging_materialization','view')}') }}.
-3. Select from the dbt source macro: {{ source('{spec.get('source_name')}', '{table.get('name')}') }}.
+2. **Always start the model with a config block**:
+   {{ config(materialized='{options.get('staging_materialization','view')}') }}
+3. Select from the dbt source macro:
+   {{ source('{spec.get('source_name')}', '{table.get('name')}') }}
 4. Apply naming conventions:
-   - Use the declared primary key `{pk}` as the identifier column.
-   - Keep other columns unchanged.
-5. Preserve column order as in the JSON spec.
-6. Include explicit column aliases identical to the original names.
-7. Output **only valid SQL code**, no commentary or markdown fences.
+   - Treat the declared primary key `{pk}` as the identifier column.
+   - Alias it as `{table.get('name')}_id` for consistency.
+   - Keep all other columns unchanged.
+5. Preserve column order exactly as in the JSON spec.
+6. Include explicit column aliases identical to the original names (except the primary key alias).
+7. Output **only valid SQL code**, no commentary, markdown fences, or explanations.
 """
+
+
 
 
 def call_ollama(prompt: str, model: str = settings.OLLAMA_MODEL,
@@ -183,14 +191,26 @@ def write_source_schema(spec: Dict[str, Any]) -> str:
         yaml.dump(source_def, f, sort_keys=False)
     return path
 def validate_sql(sql_text: str) -> bool:
-    if not sql_text.strip():
+    if not sql_text or not sql_text.strip():
+        logging.warning("AI suggestion invalid for %s: empty SQL", sql_text)
         return False
-    if "``" in sql_text:
+
+    if "```" in sql_text:
+        logging.warning("AI suggestion invalid for %s: contains markdown fences", sql_text)
         return False
-    if "{{ source(" not in sql_text and "{{ ref(" not in sql_text:
+
+    # Normalize for case/spacing
+    normalized = sql_text.lower()
+
+    if "{{ source(" not in normalized and "{{ ref(" not in normalized:
+        logging.warning("AI suggestion invalid for %s: missing source/ref macro", sql_text)
         return False
-    if "{{ config(" not in sql_text:
+
+    if "{{ config(" not in normalized:
+        logging.warning("AI suggestion invalid for %s: missing config macro", sql_text)
         return False
+
+    # Passed all checks
     return True
 def generate_dbt_files(spec_json: Dict[str, Any]) -> Dict[str, Any]:
     """
