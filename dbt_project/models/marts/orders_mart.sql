@@ -1,2 +1,5 @@
 {{ config(materialized='table') }}
-select * from {{ ref('stg_orders') }}
+
+SELECT
+    *
+FROM {{ ref('stg_orders') }}
